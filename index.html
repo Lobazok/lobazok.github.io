@@ -1,15 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React</title>
-    <script type="module" crossorigin src="/assets/index-02c6e023.js"></script>
-    <link rel="stylesheet" href="/assets/index-764daff4.css">
-  </head>
-  <body>
-    <div id="root"></div>
-    
-  </body>
+<html>
+<head>
+    <title>Acceder a la cámara</title>
+</head>
+<body>
+    <h1>Acceso a la cámara</h1>
+    <video id="videoElement" width="640" height="480" autoplay></video>
+
+    <script>
+        // Verificamos si el navegador es compatible con la API de getUserMedia
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            // Accedemos a la cámara
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function (stream) {
+                    var videoElement = document.getElementById('videoElement');
+                    // Mostramos el stream de la cámara en el elemento de video
+                    videoElement.srcObject = stream;
+                })
+                .catch(function (error) {
+                    console.error('Error al acceder a la cámara: ', error);
+                });
+        } else {
+            console.error('getUserMedia no está soportado en este navegador.');
+        }
+    </script>
+</body>
 </html>
