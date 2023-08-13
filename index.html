@@ -1,28 +1,71 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Acceder a la cámara</title>
+  <title>CNN con Kernel Modificable</title>
 </head>
 <body>
-    <h1>Acceso a la cámara</h1>
-    <video id="videoElement" width="640" height="480" autoplay></video>
+  <h1>Convolutional Neural Network con Kernel Modificable</h1>
+  <video autoplay playsinline id="webcam" width="224" height="224"></video>
+  <canvas id="output" width="224" height="224"></canvas>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script>
+    async function setupCamera() {
+      const constraints = {
+        video: { facingMode: 'environment', width: 224, height: 224 }
+      };
+      const video = document.getElementById('webcam');
+      await navigator.mediaDevices.getUserMedia(constraints)
+        .then((stream) => {
+          video.srcObject = stream;
+          return new Promise((resolve) => {
+            video.onloadedmetadata = () => {
+              resolve(video);
+            };
+          });
+        });
+      return video;
+    }
 
-    <script>
-        // Verificamos si el navegador es compatible con la API de getUserMedia
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            // Accedemos a la cámara
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(function (stream) {
-                    var videoElement = document.getElementById('videoElement');
-                    // Mostramos el stream de la cámara en el elemento de video
-                    videoElement.srcObject = stream;
-                })
-                .catch(function (error) {
-                    console.error('Error al acceder a la cámara: ', error);
-                });
-        } else {
-            console.error('getUserMedia no está soportado en este navegador.');
-        }
-    </script>
+    async function loadModel() {
+      const model = await tf.loadLayersModel('https://storage.googleapis.com/tfjs-models/tfjs/mobilenet_v1_0.25_224/model.json');
+      const layer = model.getLayer('conv_pw_13_relu');
+      return tf.model({ inputs: model.inputs, outputs: layer.output });
+    }
+
+    function applyKernel(image, kernel) {
+      return tf.tidy(() => {
+        const result = tf.conv2d(image, kernel, 1, 'same');
+        return result;
+      });
+    }
+
+    async function main() {
+      const video = await setupCamera();
+      const model = await loadModel();
+      const canvas = document.getElementById('output');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 224;
+      canvas.height = 224;
+
+      const webcamImage = tf.browser.fromPixels(video);
+      const batchedImage = webcamImage.expandDims(0);
+      const processed = model.predict(batchedImage);
+      
+      // Define tu kernel (filtro) aquí. Puedes cambiar los valores según lo desees.
+      const kernelValues = [ [1, 1, 1], [0, 0, 0], [-1, -1, -1] ];
+      const kernel = tf.tensor(kernelValues);
+
+      const convolved = applyKernel(processed, kernel);
+      const convolvedData = convolved.squeeze().arraySync();
+      
+      const imageData = new ImageData(new Uint8ClampedArray(convolvedData), 224, 224);
+      ctx.putImageData(imageData, 0, 0);
+
+      video.style.display = 'none';
+    }
+
+    main();
+  </script>
 </body>
 </html>
+
